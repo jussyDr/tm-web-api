@@ -104,6 +104,7 @@ impl DedicatedServerClient {
                 let key = DecodingKey::from_secret(&[]);
 
                 let mut validation = Validation::default();
+                validation.set_audience(&["NadeoServices"]);
                 validation.insecure_disable_signature_validation();
 
                 let token_data = jsonwebtoken::decode::<serde_json::Map<String, serde_json::Value>>(
