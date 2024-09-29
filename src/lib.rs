@@ -107,13 +107,11 @@ impl DedicatedServerClient {
                 validation.set_audience(&["NadeoServices"]);
                 validation.insecure_disable_signature_validation();
 
-                let token_data = jsonwebtoken::decode::<serde_json::Map<String, serde_json::Value>>(
+                let token_data = jsonwebtoken::decode::<AccessTokenClaims>(
                     &auth_token.access_token,
                     &key,
                     &validation,
                 )?;
-
-                println!("{:?}", token_data.claims);
 
                 self.auth_token = Some(auth_token);
 
