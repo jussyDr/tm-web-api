@@ -1,4 +1,8 @@
-use std::ops::Deref;
+use std::{
+    error,
+    fmt::{self, Display, Formatter},
+    ops::Deref,
+};
 
 use jsonwebtoken::{DecodingKey, Validation};
 use reqwest::header::{AUTHORIZATION, USER_AGENT};
@@ -6,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 const USER_AGENT_VALUE: &str = "JussyDr";
 
+#[derive(Debug)]
 pub enum Error {
     Reqwest(reqwest::Error),
     Jwt(jsonwebtoken::errors::Error),
@@ -22,6 +27,14 @@ impl From<jsonwebtoken::errors::Error> for Error {
         Self::Jwt(error)
     }
 }
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
+impl error::Error for Error {}
 
 pub struct Client {
     http_client: reqwest::Client,
