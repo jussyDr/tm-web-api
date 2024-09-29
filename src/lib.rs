@@ -8,8 +8,6 @@ use jsonwebtoken::{DecodingKey, Validation};
 use reqwest::header::{AUTHORIZATION, USER_AGENT};
 use serde::{Deserialize, Serialize};
 
-const USER_AGENT_VALUE: &str = "JussyDr";
-
 #[derive(Debug)]
 pub enum Error {
     Reqwest(reqwest::Error),
@@ -30,7 +28,10 @@ impl From<jsonwebtoken::errors::Error> for Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
+        match *self {
+            Self::Reqwest(ref error) => Display::fmt(error, f),
+            Self::Jwt(ref error) => Display::fmt(error, f),
+        }
     }
 }
 
@@ -38,24 +39,21 @@ impl error::Error for Error {}
 
 pub struct Client {
     http_client: reqwest::Client,
-}
-
-impl Default for Client {
-    fn default() -> Self {
-        Self::new()
-    }
+    user_agent: &'static str,
 }
 
 impl Client {
-    pub fn new() -> Self {
+    pub fn new(user_agent: &'static str) -> Self {
         Self {
             http_client: reqwest::Client::new(),
+            user_agent,
         }
     }
 
     pub async fn get_client_config(&self) -> Result<ClientConfig, reqwest::Error> {
         self.http_client
             .get("https://prod.trackmania.core.nadeo.online/client/config")
+            .header(USER_AGENT, self.user_agent)
             .send()
             .await?
             .json()
@@ -80,9 +78,9 @@ impl Deref for DedicatedServerClient {
 }
 
 impl DedicatedServerClient {
-    pub fn new(login: &'static str, password: &'static str) -> Self {
+    pub fn new(user_agent: &'static str, login: &'static str, password: &'static str) -> Self {
         Self {
-            client: Client::new(),
+            client: Client::new(user_agent),
             login,
             password,
             auth_token: None,
@@ -96,7 +94,7 @@ impl DedicatedServerClient {
                 let auth_token: AuthToken = self
                     .http_client
                     .post("https://prod.trackmania.core.nadeo.online/v2/authentication/token/basic")
-                    .header(USER_AGENT, USER_AGENT_VALUE)
+                    .header(USER_AGENT, self.user_agent)
                     .basic_auth(self.login, Some(self.password))
                     .send()
                     .await?
@@ -148,7 +146,7 @@ impl DedicatedServerClient {
 
         self.http_client
             .put(url)
-            .header(USER_AGENT, USER_AGENT_VALUE)
+            .header(USER_AGENT, self.user_agent)
             .header(AUTHORIZATION, authorization)
             .json(config)
             .send()
@@ -166,7 +164,7 @@ impl DedicatedServerClient {
 
         self.http_client
             .delete(url)
-            .header(USER_AGENT, USER_AGENT_VALUE)
+            .header(USER_AGENT, self.user_agent)
             .header(AUTHORIZATION, authorization)
             .send()
             .await?;
