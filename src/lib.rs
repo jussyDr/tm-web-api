@@ -86,7 +86,7 @@ impl DedicatedServerClient {
     pub async fn register_dedicated_server(
         &mut self,
         account_id: &str,
-        config: &ServerConfig,
+        config: &ServerConfig<'_>,
     ) -> Result<(), Error> {
         let access_token = self.get_access_token().await?;
 
@@ -138,15 +138,15 @@ struct AuthToken {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ServerConfig {
-    pub title_id: &'static str,
-    pub script_file_name: &'static str,
+pub struct ServerConfig<'a> {
+    pub title_id: &'a str,
+    pub script_file_name: &'a str,
     pub port: u16,
     pub player_count_max: u8,
     pub player_count: u8,
-    pub server_name: &'static str,
+    pub server_name: &'a str,
     pub is_private: bool,
-    pub ip: &'static str,
-    pub game_mode_custom_data: &'static str,
-    pub game_mode: &'static str,
+    pub ip: &'a str,
+    pub game_mode_custom_data: &'a str,
+    pub game_mode: &'a str,
 }
