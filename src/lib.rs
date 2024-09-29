@@ -68,6 +68,7 @@ pub struct DedicatedServerClient {
     login: &'static str,
     password: &'static str,
     auth_token: Option<AuthToken>,
+    access_token_claims: Option<AccessTokenClaims>,
 }
 
 impl Deref for DedicatedServerClient {
@@ -85,6 +86,7 @@ impl DedicatedServerClient {
             login,
             password,
             auth_token: None,
+            access_token_claims: None,
         }
     }
 
@@ -101,23 +103,35 @@ impl DedicatedServerClient {
                     .json()
                     .await?;
 
+                self.auth_token = Some(auth_token);
+
+                let access_token = &self.auth_token.as_ref().unwrap().access_token;
+
                 let key = DecodingKey::from_secret(&[]);
 
                 let mut validation = Validation::default();
                 validation.set_audience(&["NadeoServices"]);
                 validation.insecure_disable_signature_validation();
 
-                let token_data = jsonwebtoken::decode::<AccessTokenClaims>(
-                    &auth_token.access_token,
-                    &key,
-                    &validation,
-                )?;
+                let token_data =
+                    jsonwebtoken::decode::<AccessTokenClaims>(access_token, &key, &validation)?;
 
-                self.auth_token = Some(auth_token);
+                self.access_token_claims = Some(token_data.claims);
 
-                Ok(&self.auth_token.as_ref().unwrap().access_token)
+                Ok(access_token)
             }
             Some(ref auth_token) => Ok(&auth_token.access_token),
+        }
+    }
+
+    pub async fn get_account_id(&mut self) -> Result<&str, Error> {
+        match self.access_token_claims {
+            None => {
+                self.get_access_token().await?;
+
+                Ok(&self.access_token_claims.as_ref().unwrap().sub)
+            }
+            Some(ref access_token_claims) => Ok(&access_token_claims.sub),
         }
     }
 
@@ -173,7 +187,10 @@ pub struct ClientConfigSettings {
 }
 
 #[derive(Deserialize)]
-struct AccessTokenClaims {}
+struct AccessTokenClaims {
+    exp: u32,
+    sub: String,
+}
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
