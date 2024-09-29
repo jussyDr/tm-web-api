@@ -6,8 +6,6 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 
-// TODO: logging support
-
 const USER_AGENT_VALUE: &str = "JussyDr";
 
 pub struct Client {
@@ -27,7 +25,7 @@ impl Client {
         }
     }
 
-    pub async fn client_config(&self) -> Result<ClientConfig, Error> {
+    pub async fn get_client_config(&self) -> Result<ClientConfig, Error> {
         self.http_client
             .get("https://prod.trackmania.core.nadeo.online/client/config")
             .send()
@@ -74,6 +72,8 @@ impl DedicatedServerClient {
                     .await?
                     .json()
                     .await?;
+
+                println!("{}", auth_token.access_token);
 
                 self.auth_token = Some(auth_token);
 
