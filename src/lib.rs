@@ -125,6 +125,11 @@ impl DedicatedServerClient {
 
 #[derive(Deserialize)]
 pub struct ClientConfig {
+    pub settings: ClientConfigSettings,
+}
+
+#[derive(Deserialize)]
+pub struct ClientConfigSettings {
     #[serde(rename = "ClientIP")]
     pub client_ip: String,
 }
