@@ -1,12 +1,27 @@
 use std::ops::Deref;
 
-use reqwest::{
-    header::{AUTHORIZATION, USER_AGENT},
-    Error,
-};
+use jsonwebtoken::{DecodingKey, Validation};
+use reqwest::header::{AUTHORIZATION, USER_AGENT};
 use serde::{Deserialize, Serialize};
 
 const USER_AGENT_VALUE: &str = "JussyDr";
+
+pub enum Error {
+    Reqwest(reqwest::Error),
+    Jwt(jsonwebtoken::errors::Error),
+}
+
+impl From<reqwest::Error> for Error {
+    fn from(error: reqwest::Error) -> Self {
+        Self::Reqwest(error)
+    }
+}
+
+impl From<jsonwebtoken::errors::Error> for Error {
+    fn from(error: jsonwebtoken::errors::Error) -> Self {
+        Self::Jwt(error)
+    }
+}
 
 pub struct Client {
     http_client: reqwest::Client,
@@ -25,7 +40,7 @@ impl Client {
         }
     }
 
-    pub async fn get_client_config(&self) -> Result<ClientConfig, Error> {
+    pub async fn get_client_config(&self) -> Result<ClientConfig, reqwest::Error> {
         self.http_client
             .get("https://prod.trackmania.core.nadeo.online/client/config")
             .send()
@@ -73,7 +88,18 @@ impl DedicatedServerClient {
                     .json()
                     .await?;
 
-                println!("{}", auth_token.access_token);
+                let key = DecodingKey::from_secret(&[]);
+
+                let mut validation = Validation::default();
+                validation.insecure_disable_signature_validation();
+
+                let token_data = jsonwebtoken::decode::<serde_json::Map<String, serde_json::Value>>(
+                    &auth_token.access_token,
+                    &key,
+                    &validation,
+                )?;
+
+                println!("{:?}", token_data.claims);
 
                 self.auth_token = Some(auth_token);
 
@@ -133,6 +159,9 @@ pub struct ClientConfigSettings {
     #[serde(rename = "ClientIP")]
     pub client_ip: String,
 }
+
+#[derive(Deserialize)]
+struct AccessTokenClaims {}
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
