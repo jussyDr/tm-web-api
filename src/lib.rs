@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use reqwest::{
     header::{AUTHORIZATION, USER_AGENT},
     Error,
@@ -8,17 +10,52 @@ use serde::{Deserialize, Serialize};
 
 const USER_AGENT_VALUE: &str = "JussyDr";
 
-pub struct DedicatedServerClient {
+pub struct Client {
     http_client: reqwest::Client,
+}
+
+impl Default for Client {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Client {
+    pub fn new() -> Self {
+        Self {
+            http_client: reqwest::Client::new(),
+        }
+    }
+
+    pub async fn client_config(&self) -> Result<ClientConfig, Error> {
+        self.http_client
+            .get("https://prod.trackmania.core.nadeo.online/client/config")
+            .send()
+            .await?
+            .json()
+            .await
+    }
+}
+
+pub struct DedicatedServerClient {
+    client: Client,
     login: &'static str,
     password: &'static str,
     auth_token: Option<AuthToken>,
 }
 
+impl Deref for DedicatedServerClient {
+    type Target = Client;
+
+    fn deref(&self) -> &Client {
+        &self.client
+    }
+}
+
 impl DedicatedServerClient {
     pub fn new(login: &'static str, password: &'static str) -> Self {
         Self {
-            http_client: reqwest::Client::new(),
+            client: Client::new(),
             login,
             password,
             auth_token: None,
@@ -84,6 +121,12 @@ impl DedicatedServerClient {
 
         Ok(())
     }
+}
+
+#[derive(Deserialize)]
+pub struct ClientConfig {
+    #[serde(rename = "ClientIP")]
+    pub client_ip: String,
 }
 
 #[derive(Deserialize)]
